@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Diabetes Care Companion - patient tracking, reminders, reports and doctor review dashboard.">
+  <title>Diabetes Care Companion</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand-mark">DCC</div>
+      <h1>Diabetes Care Companion</h1>
+      <p class="muted">A patient-focused dashboard for daily tracking, reminders and healthcare-provider review.</p>
+
+      <div class="role-switch">
+        <button class="role-btn active" data-role="patient">Patient</button>
+        <button class="role-btn" data-role="doctor">Healthcare Provider</button>
+      </div>
+
+      <form id="loginForm">
+        <label for="loginName" id="loginNameLabel">Name</label>
+        <input id="loginName" type="text" placeholder="Enter your name" required>
+        <label for="loginEmail" id="loginEmailLabel">Email</label>
+        <input id="loginEmail" type="email" placeholder="you@example.com" required>
+        <div id="providerCodeWrap" class="hidden">
+          <label for="providerLoginCode">Provider access code</label>
+          <input id="providerLoginCode" type="text" placeholder="DOC-1024" autocomplete="off">
+          <small class="auth-note">Demo provider code: <strong>DOC-1024</strong></small>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit">Enter Dashboard</button>
+      </form>
+      <p class="auth-note">Demo project: data is stored in this browser using localStorage.</p>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark small">DCC</div>
+        <div>
+          <strong>Diabetes Care</strong>
+          <span>Companion</span>
+        </div>
+      </div>
+
+      <nav id="patientNav" class="nav">
+        <button class="nav-item active" data-page="patientDashboard"><span>Overview</span></button>
+        <button class="nav-item" data-page="calendar"><span>Calendar & Reminders</span></button>
+        <button class="nav-item" data-page="health"><span>Health Tracking</span></button>
+        <button class="nav-item" data-page="records"><span>My Records</span></button>
+        <button class="nav-item" data-page="report"><span>Progress Report</span></button>
+        <button class="nav-item" data-page="food"><span>Kenyan Food Guide</span></button>
+        <button class="nav-item" data-page="learn"><span>Learn</span></button>
+      </nav>
+
+      <nav id="doctorNav" class="nav hidden">
+        <button class="nav-item active" data-page="doctorDashboard"><span>Provider Overview</span></button>
+        <button class="nav-item" data-page="patients"><span>Patients</span></button>
+        <button class="nav-item" data-page="doctorReports"><span>Patient Reports</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="profileBtn" class="sidebar-action">Profile & Access</button>
+        <button id="logoutBtn" class="sidebar-action">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="pageEyebrow">Patient Portal</p>
+          <h2 id="pageTitle">Overview</h2>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-tools"><span id="notificationStatus" class="status-pill">Notifications not enabled yet</span><button id="enableNotificationsBtn" class="small-btn">Enable alerts</button></div>
+          <div class="avatar" id="avatar">A</div>
+        </div>
+      </header>
+
+      <section id="patientDashboard" class="page active-page">
+        <div id="liveReminder" class="live-reminder hidden"></div>
+        <div class="welcome-banner">
+          <div>
+            <p class="eyebrow light">TODAY</p>
+            <h1 id="welcomeName">Good morning</h1>
+            <p id="todayDate"></p>
+          </div>
+          <button class="btn btn-light" data-page-jump="calendar">Open calendar</button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">Tasks today</span>
+            <strong id="todayTaskCount">0</strong>
+            <small id="todayTaskProgress">0 completed</small>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Health entries</span>
+            <strong id="healthEntryCount">0</strong>
+            <small>Stored locally</small>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Review flags</span>
+            <strong id="patientFlagCount">0</strong>
+            <small>For provider review</small>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Next appointment</span>
+            <strong id="nextAppointment">None</strong>
+            <small id="nextAppointmentDate">Add an appointment</small>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>Today's care plan</h3>
+                <p>Mark activities as you complete them.</p>
+              </div>
+              <button class="text-btn" data-page-jump="calendar">Manage</button>
+            </div>
+            <div id="todayTasks" class="task-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>Recent health entries</h3>
+                <p>Your latest patient-entered information.</p>
+              </div>
+              <button class="text-btn" data-page-jump="health">Add entry</button>
+            </div>
+            <div id="recentEntries" class="compact-list"></div>
+          </div>
+        </div>
+
+        <div class="notice-card">
+          <div>
+            <strong>Provider review</strong>
+            <p>If you feel your condition has changed or a health entry needs professional attention, create a review flag. The system does not diagnose conditions.</p>
+          </div>
+          <button class="btn btn-outline" data-page-jump="health">Record an update</button>
+        </div>
+      </section>
+
+      <section id="calendar" class="page">
+        <div class="section-intro">
+          <div>
+            <h3>Calendar & reminders</h3>
+            <p>Manage medication, glucose, activity and appointment reminders.</p>
+          </div>
+          <div class="button-row"><button id="testReminderBtn" class="btn btn-outline">Test alert</button><button id="addReminderBtn" class="btn btn-primary">Add reminder</button></div>
+        </div>
+        <div class="calendar-layout">
+          <div class="card">
+            <div class="calendar-toolbar">
+              <button id="prevMonth" class="icon-btn" aria-label="Previous month">‹</button>
+              <h3 id="calendarMonth"></h3>
+              <button id="nextMonth" class="icon-btn" aria-label="Next month">›</button>
+            </div>
+            <div class="calendar-weekdays">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3>Upcoming</h3>
+                <p>Scheduled care activities.</p>
+              </div>
+            </div>
+            <div id="upcomingList" class="compact-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="health" class="page">
+        <div class="section-intro">
+          <div>
+            <h3>Health tracking</h3>
+            <p>Record information to build a useful history for you and your healthcare provider.</p>
+          </div>
+          <button id="addHealthBtn" class="btn btn-primary">Add health entry</button>
+        </div>
+        <div class="health-grid">
+          <div class="card">
+            <div class="card-header"><div><h3>Health history</h3><p>Patient-entered records.</p></div></div>
+            <div id="healthHistory" class="table-wrap"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div><h3>Provider review flag</h3><p>Flag a change or concern for professional review.</p></div></div>
+            <form id="flagForm" class="stack-form">
+              <label for="flagReason">What should the provider review?</label>
+              <textarea id="flagReason" rows="5" placeholder="Describe the change or concern in your own words." required></textarea>
+              <button class="btn btn-primary" type="submit">Send for review</button>
+              <small class="form-note">This does not diagnose or interpret your condition. It only alerts the connected provider that a review may be needed.</small>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="records" class="page">
+        <div class="section-intro">
+          <div><h3>My records</h3><p>Keep a simple patient-owned history that can be reviewed during appointments.</p></div>
+          <button id="addRecordBtn" class="btn btn-primary">Add record</button>
+        </div>
+        <div class="records-grid">
+          <div class="card">
+            <h3>Glucose records</h3>
+            <div id="glucoseRecords" class="metric-list"></div>
+          </div>
+          <div class="card">
+            <h3>Medication records</h3>
+            <div id="medicationRecords" class="metric-list"></div>
+          </div>
+          <div class="card">
+            <h3>Appointments</h3>
+            <div id="appointmentRecords" class="metric-list"></div>
+          </div>
+        </div>
+        <div class="card report-preview">
+          <div class="card-header">
+            <div><h3>Shareable health summary</h3><p>Prepare a concise report for your healthcare provider.</p></div>
+            <button class="btn btn-outline" data-page-jump="report">Open report</button>
+          </div>
+          <div id="recordsSummary"></div>
+        </div>
+      </section>
+
+      <section id="report" class="page">
+        <div class="section-intro">
+          <div><h3>Progress report</h3><p>A structured summary of patient-entered information for appointment review.</p></div>
+          <button id="printReportBtn" class="btn btn-primary">Print / Save PDF</button>
+        </div>
+        <div id="patientReport" class="report-paper"></div>
+      </section>
+
+      <section id="food" class="page">
+        <div class="section-intro">
+          <div><h3>Kenyan food guide</h3><p>Simple educational information about common local foods and balanced meal choices.</p></div>
+          <input id="foodSearch" class="search-input" type="search" placeholder="Search foods...">
+        </div>
+        <div id="foodGrid" class="food-grid"></div>
+        <div class="notice-card">
+          <div><strong>Important</strong><p>Food information here is educational. Individual meal plans should be discussed with an appropriate healthcare professional.</p></div>
+        </div>
+      </section>
+
+      <section id="learn" class="page">
+        <div class="section-intro"><div><h3>Learn</h3><p>Clear, simple diabetes education for everyday use.</p></div></div>
+        <div id="learnGrid" class="learn-grid"></div>
+      </section>
+
+      <section id="doctorDashboard" class="page">
+        <div class="welcome-banner doctor-banner">
+          <div><p class="eyebrow light">HEALTHCARE PROVIDER PORTAL</p><h1>Patient review center</h1><p>Review connected patient records and respond to review flags.</p></div>
+          <button class="btn btn-light" data-page-jump="patients">View patients</button>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><span class="stat-label">Connected patients</span><strong id="doctorPatientCount">0</strong><small>Demo local records</small></div>
+          <div class="stat-card"><span class="stat-label">Review flags</span><strong id="doctorFlagCount">0</strong><small>Require provider review</small></div>
+          <div class="stat-card"><span class="stat-label">Reports</span><strong id="doctorReportCount">0</strong><small>Available for review</small></div>
+          <div class="stat-card"><span class="stat-label">Appointments</span><strong id="doctorAppointmentCount">0</strong><small>Recorded by patients</small></div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="card"><div class="card-header"><div><h3>Needs review</h3><p>Patient-created flags awaiting professional review.</p></div></div><div id="doctorAlerts" class="alert-list"></div></div>
+          <div class="card"><div class="card-header"><div><h3>Recent patients</h3><p>Open a patient's report.</p></div></div><div id="doctorPatientsPreview" class="compact-list"></div></div>
+        </div>
+      </section>
+
+      <section id="patients" class="page">
+        <div class="section-intro"><div><h3>Patients</h3><p>Demo connected-patient list stored locally in this browser.</p></div><input id="patientSearch" class="search-input" type="search" placeholder="Search patients..."></div>
+        <div id="patientTable" class="card table-wrap"></div>
+      </section>
+
+      <section id="doctorReports" class="page">
+        <div class="section-intro"><div><h3>Patient reports</h3><p>Review progress summaries and documented patient concerns.</p></div></div>
+        <div id="doctorReportViewer" class="report-paper"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header"><h3 id="modalTitle">Add</h3><button id="closeModal" class="icon-btn">×</button></div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
