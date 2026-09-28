@@ -96,6 +96,7 @@ function bindGlobalEvents(){
   document.getElementById("closeModal").addEventListener("click",closeModal);
   document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
   document.getElementById("addReminderBtn").addEventListener("click",openReminderModal);
+  document.getElementById("scheduleAppointmentBtn")?.addEventListener("click",openAppointmentModal);
   document.getElementById("addHealthBtn").addEventListener("click",openHealthModal);
   document.getElementById("addRecordBtn").addEventListener("click",openHealthModal);
   document.getElementById("printReportBtn").addEventListener("click",()=>window.print());
@@ -115,6 +116,7 @@ function bindGlobalEvents(){
     const auth=e.target.closest("[data-auth-action]");if(auth)handleAuthorization(auth.dataset.authAction,auth.dataset.email);
     const feedback=e.target.closest("[data-feedback]");if(feedback)openFeedbackModal(feedback.dataset.feedback);
     const snooze=e.target.closest("[data-snooze-id]");if(snooze)snoozeReminder(Number(snooze.dataset.snoozeId));
+    const appt=e.target.closest("[data-appt-action]");if(appt)handleAppointmentAction(appt.dataset.apptAction,Number(appt.dataset.id));
   });
 }
 
@@ -181,12 +183,17 @@ function toggleTask(id){const r=state.reminders.find(x=>x.id===id);if(!r)return;
 function createReviewFlag(){const reason=document.getElementById("flagReason").value.trim();if(!reason)return;state.flags.push({id:Date.now(),patient:patientName(),email:currentUser().email,providerCode:state.providerConnection.code||"DOC-1024",reason,createdAt:new Date().toISOString(),status:"Open"});syncDemoPatient();saveState();document.getElementById("flagReason").value="";renderAll();showToast("Provider review alert created")}
 
 function renderCalendar(){
-  const y=currentMonth.getFullYear(),m=currentMonth.getMonth();document.getElementById("calendarMonth").textContent=new Date(y,m,1).toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
+  document.getElementById("calendarMonth").textContent=new Date(y,m,1).toLocaleDateString("en-US",{month:"long",year:"numeric"});
   const first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),prevDays=new Date(y,m,0).getDate();let cells="";
-  for(let i=0;i<42;i++){const n=i-first+1;let d,muted=false;if(n<1){d=new Date(y,m-1,prevDays+n);muted=true}else if(n>days){d=new Date(y,m+1,n-days);muted=true}else d=new Date(y,m,n);const iso=isoFromDate(d);const items=[...state.reminders.filter(r=>r.date===iso),...state.appointments.filter(a=>a.date===iso)].slice(0,2);cells+=`<div class="calendar-day ${muted?"muted":""} ${iso===todayISO()?"today":""}"><span class="day-number">${d.getDate()}</span>${items.map(x=>`<span class="calendar-dot">${esc(x.title)}</span>`).join("")}</div>`}
+  for(let i=0;i<42;i++){
+    const n=i-first+1;let d,muted=false;if(n<1){d=new Date(y,m-1,prevDays+n);muted=true}else if(n>days){d=new Date(y,m+1,n-days);muted=true}else d=new Date(y,m,n);
+    const iso=isoFromDate(d);const items=[...state.reminders.filter(r=>r.date===iso),...state.appointments.filter(a=>a.date===iso)].slice(0,3);
+    cells+=`<div class="calendar-day ${muted?"muted":""} ${iso===todayISO()?"today":""}"><span class="day-number">${d.getDate()}</span>${items.map(x=>`<span class="calendar-dot">${esc(x.title)}${x.status?` · ${esc(x.status)}`:""}</span>`).join("")}</div>`;
+  }
   document.getElementById("calendarGrid").innerHTML=cells;
-  const upcoming=[...state.reminders.map(r=>({...r,kind:"Reminder"})),...state.appointments.map(a=>({...a,kind:"Appointment"}))].filter(x=>x.date>=todayISO()).sort((a,b)=>(a.date+(a.time||"" )).localeCompare(b.date+(b.time||""))).slice(0,10);
-  document.getElementById("upcomingList").innerHTML=upcoming.length?upcoming.map(x=>`<div class="compact-item"><div><strong>${esc(x.title)}</strong><span>${esc(x.kind)}${x.time?" · "+esc(x.time):""}</span></div><span>${formatDate(x.date)}</span></div>`).join(""):`<div class="empty">Nothing scheduled.</div>`;
+  const upcoming=[...state.reminders.map(r=>({...r,kind:"Reminder",status:r.done?"Completed":"Scheduled"})),...state.appointments.map(a=>({...a,kind:"Appointment"}))].filter(x=>x.date>=todayISO()).sort((a,b)=>(a.date+(a.time||"")).localeCompare(b.date+(b.time||""))).slice(0,12);
+  document.getElementById("upcomingList").innerHTML=upcoming.length?upcoming.map(x=>`<div class="compact-item"><div><strong>${esc(x.title)}</strong><span>${esc(x.kind)}${x.time?` · ${esc(x.time)}`:""}${x.status?` · ${esc(x.status)}`:""}</span></div><span>${formatDate(x.date)}</span></div>`).join(""):`<div class="empty">Nothing scheduled.</div>`;
 }
 function renderHealth(){const entries=[...state.healthEntries].sort((a,b)=>b.createdAt.localeCompare(a.createdAt));document.getElementById("healthHistory").innerHTML=entries.length?`<table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Value</th><th>Note</th></tr></thead><tbody>${entries.map(e=>`<tr><td>${formatDate(e.date)}</td><td>${esc(e.kind)}</td><td>${esc(e.value||"—")}</td><td>${esc(e.note||"—")}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No health information recorded yet.</div>`}
 function renderRecords(){
@@ -211,6 +218,7 @@ function renderReports(){
   <div class="report-section"><h4>Overview</h4><div class="report-grid"><div class="report-stat"><span>Health entries</span><strong>${entries.length}</strong></div><div class="report-stat"><span>Medication reminders completed</span><strong>${meds.length?Math.round(completed/meds.length*100):0}%</strong></div><div class="report-stat"><span>Open review requests</span><strong>${openFlags.length}</strong></div></div></div>
   <div class="report-section"><h4>Recent health records</h4>${entries.length?`<table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Value</th><th>Note</th></tr></thead><tbody>${[...entries].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(e=>`<tr><td>${formatDate(e.date)}</td><td>${esc(e.kind)}</td><td>${esc(e.value||"—")}</td><td>${esc(e.note||"—")}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">No health records have been entered.</div>`}</div>
   <div class="report-section"><h4>Provider review history</h4>${allFlags.length?allFlags.slice().reverse().map(f=>`<div class="flag-row"><strong>${esc(f.status)} · Review request</strong><p>${esc(f.reason)}</p><small>${new Date(f.createdAt).toLocaleString()}</small></div>`).join(""):`<div class="empty">No review requests.</div>`}</div>
+  <div class="report-section"><h4>Appointments</h4>${state.appointments.filter(a=>a.patientEmail===targetEmail).length?state.appointments.filter(a=>a.patientEmail===targetEmail).slice().sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).map(a=>`<div class="flag-row"><strong>${esc(a.title)} · ${esc(a.status)}</strong><p>${formatDate(a.date)} at ${esc(a.time)} with ${esc(a.provider||"Provider")}</p>${a.note?`<small>${esc(a.note)}</small>`:""}</div>`).join(""):`<div class="empty">No appointments recorded.</div>`}</div>
   <div class="report-section"><h4>Provider feedback</h4>${feedback.length?feedback.slice().reverse().map(f=>`<div class="report-note"><strong>${esc(f.provider)}</strong><br>${esc(f.note)}<br><small>${new Date(f.createdAt).toLocaleString()}</small></div>`).join(""):`<div class="empty">No provider feedback recorded.</div>`}</div>
   <div class="report-note"><strong>Prototype note:</strong> This report organizes patient-entered information. It does not diagnose, interpret clinical results, recommend medication changes or replace professional medical assessment.</div>`;
   if(document.getElementById("patientReport")) document.getElementById("patientReport").innerHTML=html;
@@ -227,7 +235,8 @@ function renderDoctor(){
   document.getElementById("doctorPatientCount").textContent=state.patients.length;
   document.getElementById("doctorFlagCount").textContent=flags.length;
   document.getElementById("doctorReportCount").textContent=state.patients.length;
-  document.getElementById("doctorAppointmentCount").textContent=state.appointments.length;
+  const providerAppointments=state.appointments.filter(a=>a.providerCode===providerCode || !a.providerCode);
+  document.getElementById("doctorAppointmentCount").textContent=providerAppointments.filter(a=>a.status!=="Declined").length;
 
   document.getElementById("doctorAlerts").innerHTML=flags.length
     ? flags.map(f=>`<div class="alert-item"><h4>${esc(f.patient)} — review requested</h4><p>${esc(f.reason)}</p><div class="alert-actions"><button class="small-btn primary" data-alert-action="review" data-id="${f.id}">Mark reviewed</button><button class="small-btn" data-feedback="${esc(f.email||"")}">Provider feedback</button><button class="small-btn" data-alert-action="report" data-id="${f.id}">Open report</button></div></div>`).join("")
@@ -239,16 +248,34 @@ function renderDoctor(){
     html+=`<div class="provider-subtitle">Pending access requests</div>`;
     html+=pending.map(p=>`<div class="compact-item"><div><strong>${esc(p.name)}</strong><span>${esc(p.email)}</span></div><div><button class="small-btn primary" data-auth-action="approve" data-email="${esc(p.email)}">Approve</button><button class="small-btn" data-auth-action="decline" data-email="${esc(p.email)}">Decline</button></div></div>`).join("");
   }
+  const appointmentRequests=providerAppointments.filter(a=>a.status==="Pending");
+  if(appointmentRequests.length){
+    html+=`<div class="provider-subtitle">Appointment requests</div>`;
+    html+=appointmentRequests.map(a=>`<div class="compact-item"><div><strong>${esc(a.title)}</strong><span>${esc(a.patient)} · ${formatDate(a.date)} at ${esc(a.time)}</span></div><div><button class="small-btn primary" data-appt-action="confirm" data-id="${a.id}">Confirm</button><button class="small-btn" data-appt-action="decline" data-id="${a.id}">Decline</button></div></div>`).join("");
+  }
+  const upcomingProviderAppointments=providerAppointments.filter(a=>a.status==="Confirmed" && a.date>=todayISO()).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,5);
+  if(upcomingProviderAppointments.length){
+    html+=`<div class="provider-subtitle">Confirmed appointments</div>`;
+    html+=upcomingProviderAppointments.map(a=>`<div class="compact-item"><div><strong>${esc(a.title)}</strong><span>${esc(a.patient)} · ${formatDate(a.date)} at ${esc(a.time)}</span></div><span class="status-pill">Confirmed</span></div>`).join("");
+  }
   if(state.patients.length){
     html+=`<div class="provider-subtitle">Connected patients</div>`;
     html+=state.patients.slice(0,6).map(p=>`<div class="compact-item"><div><strong>${esc(p.name)}</strong><span>${esc(p.email)} · ${p.entryCount||0} records</span></div><button class="text-btn" data-view-patient="${esc(p.email)}">Open</button></div>`).join("");
-  }else if(!pending.length){
-    html+=`<div class="empty">No connected patients yet.</div>`;
+  }else if(!pending.length && !appointmentRequests.length){
+    html+=`<div class="empty">No connected patients or appointment requests yet.</div>`;
   }
   document.getElementById("doctorPatientsPreview").innerHTML=html;
 }
 function renderPatients(){const q=(document.getElementById("patientSearch")?.value||"").toLowerCase();const list=state.patients.filter(p=>p.name.toLowerCase().includes(q)||p.email.toLowerCase().includes(q));document.getElementById("patientTable").innerHTML=list.length?`<table class="data-table"><thead><tr><th>Patient</th><th>Email</th><th>Open alerts</th><th>Records</th><th></th></tr></thead><tbody>${list.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.email)}</td><td>${state.flags.filter(f=>f.email===p.email&&f.status==="Open").length}</td><td>${p.entryCount||0}</td><td><button class="small-btn primary" data-view-patient="${esc(p.email)}">View report</button></td></tr>`).join("")}</tbody></table>`:`<div class="empty">No connected patients found.</div>`}
 function handleAlertAction(action,id){const f=state.flags.find(x=>x.id===id);if(!f)return;if(action==="review"){f.status="Reviewed";saveState();renderAll();showToast("Review marked as reviewed")}if(action==="report"){navigate("doctorReports")}}
+function handleAppointmentAction(action,id){
+  const a=state.appointments.find(x=>x.id===id); if(!a)return;
+  const providerCode=currentUser().providerCode||"DOC-1024";
+  if(a.providerCode && a.providerCode!==providerCode){showToast("This appointment belongs to another provider");return;}
+  a.status=action==="confirm"?"Confirmed":"Declined";
+  a.reviewedAt=new Date().toISOString();
+  saveState();renderAll();showToast(action==="confirm"?"Appointment confirmed":"Appointment declined");
+}
 function viewPatient(email){
   const p=state.patients.find(x=>x.email===email && x.authorized);
   if(!p){showToast("This patient has not approved provider access yet");return;}
@@ -285,6 +312,18 @@ function openFeedbackModal(email){const p=state.patients.find(x=>x.email===email
 function openModal(title,body){document.getElementById("modalTitle").textContent=title;document.getElementById("modalBody").innerHTML=body;document.getElementById("modal").classList.remove("hidden")}
 function closeModal(){document.getElementById("modal").classList.add("hidden");document.getElementById("modalBody").innerHTML=""}
 function openReminderModal(){openModal("Add working reminder",`<form id="reminderModalForm" class="modal-form"><label>Reminder title</label><input id="rTitle" required placeholder="e.g. Blood glucose check"><div class="row"><div><label>Type</label><select id="rType"><option>Glucose</option><option>Medication</option><option>Activity</option><option>Appointment</option><option>Other</option></select></div><div><label>Date</label><input id="rDate" type="date" value="${todayISO()}" required></div></div><label>Time</label><input id="rTime" type="time" value="${futureTime(2)}" required><button class="btn btn-primary" type="submit">Save working reminder</button></form>`);document.getElementById("reminderModalForm").addEventListener("submit",e=>{e.preventDefault();state.reminders.push({id:Date.now(),title:document.getElementById("rTitle").value.trim(),type:document.getElementById("rType").value,date:document.getElementById("rDate").value,time:document.getElementById("rTime").value,done:false,lastAlerted:null});saveState();closeModal();renderAll();showToast("Reminder saved — browser will alert when due")})}
+function openAppointmentModal(){
+  if(!isPatient()){showToast("Appointments are requested by patients in this demo");return;}
+  const u=currentUser();
+  const connection=state.authorizationRequests.find(r=>r.email===u.email&&r.code==="DOC-1024"&&r.status==="Approved");
+  if(!connection){showToast("First connect and get provider access approved");return;}
+  const d=new Date(Date.now()+86400000);const date=isoFromDate(d);
+  openModal("Schedule a healthcare appointment",`<form id="appointmentForm" class="modal-form"><p class="form-note">Request an appointment with your approved healthcare provider. The provider must confirm the request.</p><label>Appointment reason</label><input id="aTitle" required placeholder="e.g. Diabetes follow-up"><div class="row"><div><label>Date</label><input id="aDate" type="date" min="${todayISO()}" value="${date}" required></div><div><label>Time</label><input id="aTime" type="time" value="10:00" required></div></div><label>Notes for provider</label><textarea id="aNote" rows="4" placeholder="Questions or information you want the provider to know"></textarea><button class="btn btn-primary" type="submit">Send appointment request</button></form>`);
+  document.getElementById("appointmentForm").addEventListener("submit",e=>{e.preventDefault();
+    const appt={id:Date.now(),title:document.getElementById("aTitle").value.trim(),date:document.getElementById("aDate").value,time:document.getElementById("aTime").value,note:document.getElementById("aNote").value.trim(),patient:u.name,patientEmail:u.email,provider:connection.provider,providerCode:connection.code,status:"Pending",createdAt:new Date().toISOString()};
+    state.appointments.push(appt);saveState();closeModal();renderAll();showToast("Appointment request sent to your provider");
+  });
+}
 function openHealthModal(){openModal("Add health entry",`<form id="healthModalForm" class="modal-form"><div class="row"><div><label>Entry type</label><select id="hKind"><option>Blood glucose</option><option>Medication</option><option>Symptom / feeling</option><option>Activity</option><option>Other</option></select></div><div><label>Date</label><input id="hDate" type="date" value="${todayISO()}" required></div></div><label>Recorded value (optional)</label><input id="hValue" placeholder="Enter what you recorded"><label>Note</label><textarea id="hNote" rows="4" placeholder="Add context in your own words"></textarea><button class="btn btn-primary" type="submit">Save health entry</button></form>`);document.getElementById("healthModalForm").addEventListener("submit",e=>{e.preventDefault();state.healthEntries.push({id:Date.now(),kind:document.getElementById("hKind").value,date:document.getElementById("hDate").value,value:document.getElementById("hValue").value.trim(),note:document.getElementById("hNote").value.trim(),createdAt:new Date().toISOString()});syncDemoPatient();saveState();closeModal();renderAll();showToast("Health entry saved")})}
 function openProfileModal(){
   const u=currentUser();
