@@ -92,6 +92,12 @@ function bindGlobalEvents(){
     saveState(); enterApp(); showToast("Dashboard ready");
   });
   document.getElementById("logoutBtn").addEventListener("click",()=>{state.session=null;saveState();location.reload()});
+  const mobileMenuBtn=document.getElementById("mobileMenuBtn");
+  const mobileMenuOverlay=document.getElementById("mobileMenuOverlay");
+  const sidebar=document.querySelector(".sidebar");
+  const closeMobileMenu=()=>{sidebar?.classList.remove("mobile-open");mobileMenuOverlay?.classList.remove("show");mobileMenuBtn?.setAttribute("aria-expanded","false")};
+  mobileMenuBtn?.addEventListener("click",()=>{const open=!sidebar.classList.contains("mobile-open");sidebar.classList.toggle("mobile-open",open);mobileMenuOverlay.classList.toggle("show",open);mobileMenuBtn.setAttribute("aria-expanded",String(open));});
+  mobileMenuOverlay?.addEventListener("click",closeMobileMenu);
   document.getElementById("profileBtn").addEventListener("click",openProfileModal);
   document.getElementById("closeModal").addEventListener("click",closeModal);
   document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
@@ -129,6 +135,7 @@ function enterApp(){
 function navigate(page){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active-page"));document.getElementById(page)?.classList.add("active-page");
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.page===page));
+  document.querySelector(".sidebar")?.classList.remove("mobile-open");document.getElementById("mobileMenuOverlay")?.classList.remove("show");document.getElementById("mobileMenuBtn")?.setAttribute("aria-expanded","false");
   const titles={patientDashboard:"Overview",calendar:"Calendar & Reminders",health:"Health Tracking",records:"My Records",report:"Progress Report",food:"Kenyan Food Guide",learn:"Learn",doctorDashboard:"Provider Overview",patients:"Patients",doctorReports:"Patient Reports"};
   document.getElementById("pageTitle").textContent=titles[page]||"Dashboard";document.getElementById("pageEyebrow").textContent=isPatient()?"Patient Portal":"Healthcare Provider Portal";
   if(page==="calendar")renderCalendar();if(page==="patients")renderPatients();if(page==="report"||page==="doctorReports")renderReports();
