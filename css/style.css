@@ -167,3 +167,33 @@ img,svg,video{max-width:100%;height:auto}
   .topbar{display:flex;align-items:center}
   .topbar>div:first-of-type{min-width:0}
 }
+
+/* Final mobile navigation correction: keep the exact desktop navigation set,
+   including Profile & Access and Sign out, inside the hamburger drawer. */
+@media(max-width:760px){
+  .sidebar .sidebar-footer{
+    display:grid !important;
+    gap:8px;
+    margin-top:auto;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+  }
+  .sidebar .sidebar-action{
+    display:block !important;
+    width:100%;
+    min-height:42px;
+    text-align:left;
+    padding:11px 14px;
+  }
+}
+
+/* Navigation consistency fix: the SAME sidebar is used on desktop and mobile.
+   On mobile it becomes the hamburger drawer; common account actions never disappear. */
+.sidebar-footer{display:grid;gap:5px}
+.sidebar-action{width:100%;cursor:pointer}
+@media(max-width:760px){
+  .sidebar{display:flex!important;flex-direction:column!important}
+  .sidebar-brand{display:flex!important}
+  .sidebar-footer{display:grid!important;gap:8px!important;margin-top:auto!important;padding-top:18px!important;border-top:1px solid rgba(185,198,216,.22)!important}
+  .sidebar-action{display:block!important;visibility:visible!important;opacity:1!important;width:100%!important;min-height:44px!important;color:#b9c6d8!important}
+}
