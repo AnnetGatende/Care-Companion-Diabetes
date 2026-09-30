@@ -20,15 +20,15 @@ let reminderTimer = null;
 let audioContext = null;
 
 const foodData = [
-  {name:"Ugali",category:"Staple",text:"A common Kenyan staple. Use portion awareness and pair meals with vegetables and an appropriate protein source."},
-  {name:"Sukuma wiki",category:"Vegetable",text:"A leafy vegetable commonly used in Kenya. It can be included as part of a balanced meal."},
-  {name:"Githeri",category:"Mixed meal",text:"A traditional combination of maize and beans. Portion awareness and the overall meal composition matter."},
-  {name:"Chapati",category:"Staple",text:"A popular flatbread. Consider portion size and balance the meal with vegetables and protein."},
-  {name:"Beans",category:"Protein",text:"Beans can form part of a balanced meal and provide plant protein and fibre."},
-  {name:"Sweet potatoes",category:"Starch",text:"A common local food that can be included in balanced meals with attention to portion size."},
-  {name:"Matoke",category:"Starch",text:"Green bananas/plantain are common in many Kenyan meals. Pair with vegetables and a suitable protein source."},
-  {name:"Vegetables",category:"Vegetable",text:"A variety of vegetables can help make meals more balanced and varied."},
-  {name:"Fruits",category:"Fruit",text:"Fruit can be part of a balanced eating pattern. Individual needs vary, so discuss personal guidance with a professional."}
+  {name:"Ugali",category:"Staple",text:"A firm maize-meal staple commonly served with vegetables, beans or protein.",image:"https://www.arise-app.com/images/dishes/en/ugali-with-beans-and-greens-and-tea-x1rbca.webp",source:"https://www.arise-app.com/dish/Ugali-with-beans-and-greens%2C-and-tea"},
+  {name:"Sukuma wiki",category:"Vegetable",text:"Cooked leafy greens commonly served as a vegetable side, often with ugali.",image:"https://tastythriftytimely.com/wp-content/uploads/2025/06/Sukuma-Wiki-FEATURED.jpg",source:"https://tastythriftytimely.com/sukuma-wiki-simple-kenyan-collard-greens/"},
+  {name:"Githeri",category:"Mixed meal",text:"A traditional Kenyan combination of maize and beans cooked together.",image:"https://eatwellabi.com/wp-content/uploads/2018/11/Githeri-.jpg",source:"https://eatwellabi.com/githeri-recipe/"},
+  {name:"Chapati",category:"Staple",text:"A popular Kenyan flatbread. Portion size and the rest of the meal still matter.",image:"https://upload.wikimedia.org/wikipedia/commons/2/2c/Chapati_kenya.jpg",source:"https://commons.wikimedia.org/wiki/File:Chapati_kenya.jpg"},
+  {name:"Beans",category:"Protein",text:"Beans provide plant protein and fibre and can be included in balanced meals.",image:"https://images.deliveryhero.io/image/global-menu-service/GV_KE/vendor/808851/product/87fd87c1-fd7b-43cd-b6ad-fb52cf6b9829.jpg",source:"https://glovoapp.com/en/ke/ngong-rongai-karen/stores/sky-hotel-karen-nrk"},
+  {name:"Sweet potatoes",category:"Starch",text:"A common local food that can be included in balanced meals with attention to portion size.",image:"https://7daysmeal.com/meals/image/2025/03/sweet-potatoes-with-tea-recipe.jpg",source:"https://7daysmeal.com/meals/meal-plan.php?id=7"},
+  {name:"Matoke",category:"Starch",text:"Green bananas/plantain are used in many Kenyan meals and can be paired with vegetables and protein.",image:"https://www.theworldonaplate.co.uk/img/dishes/kenyan/kenyan-matoke-kenyan-style.webp",source:"https://www.theworldonaplate.co.uk/cuisines/kenyan"},
+  {name:"Vegetables",category:"Vegetable",text:"Fresh local vegetables can add variety and help build a more balanced plate.",image:"https://files.peacecorps.gov/images/Kenyan_produce_at_the_market_2.2e16d0ba.fill-760x428.jpg",source:"https://www.peacecorps.gov/connect/blog/from-chai-to-ugali-exploring-food-in-kenya/"},
+  {name:"Fruits",category:"Fruit",text:"Fresh fruit can be part of a balanced eating pattern. Individual needs vary.",image:"https://i.natgeofe.com/n/c82eee82-0079-4188-a95c-14f35de8ef5a/market-nairobi-kenya_3x2.jpg",source:"https://www.nationalgeographic.com/travel/article/top-activities-things-to-do-114"}
 ];
 const learningData = [
   {title:"Understanding diabetes",text:"Learn basic concepts about diabetes, daily self-care and why consistent follow-up matters."},
@@ -231,7 +231,23 @@ function renderReports(){
   if(document.getElementById("patientReport")) document.getElementById("patientReport").innerHTML=html;
   if(document.getElementById("doctorReportViewer")) document.getElementById("doctorReportViewer").innerHTML=doctorView && !targetPatient ? `<div class="empty">Select an authorized patient from the Patients page to view their report.</div>` : html;
 }
-function renderFood(){const q=(document.getElementById("foodSearch")?.value||"").toLowerCase();const data=foodData.filter(x=>x.name.toLowerCase().includes(q)||x.category.toLowerCase().includes(q));document.getElementById("foodGrid").innerHTML=data.map(x=>`<article class="food-card"><span class="tag">${esc(x.category)}</span><h4>${esc(x.name)}</h4><p>${esc(x.text)}</p></article>`).join("")||`<div class="empty">No matching foods.</div>`}
+function renderFood(){
+  const q=(document.getElementById("foodSearch")?.value||"").toLowerCase();
+  const data=foodData.filter(x=>x.name.toLowerCase().includes(q)||x.category.toLowerCase().includes(q));
+  document.getElementById("foodGrid").innerHTML=data.map(x=>`
+    <article class="food-card">
+      <div class="food-image-wrap">
+        <img class="food-image" src="${esc(x.image)}" alt="${esc(x.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.classList.add('show')">
+        <div class="food-image-fallback" aria-hidden="true"><strong>${esc(x.name)}</strong><span>Image unavailable</span></div>
+      </div>
+      <div class="food-card-body">
+        <span class="tag">${esc(x.category)}</span>
+        <h4>${esc(x.name)}</h4>
+        <p>${esc(x.text)}</p>
+        <a class="food-source" href="${esc(x.source)}" target="_blank" rel="noopener noreferrer">Image source</a>
+      </div>
+    </article>`).join("")||`<div class="empty">No matching foods.</div>`
+}
 function renderLearn(){document.getElementById("learnGrid").innerHTML=learningData.map(x=>`<article class="learn-card"><h4>${esc(x.title)}</h4><p>${esc(x.text)}</p></article>`).join("")}
 
 // ---------- Provider ----------
